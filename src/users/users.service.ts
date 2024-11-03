@@ -1,8 +1,9 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
-import { Model } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import { User } from 'src/users/entities/user.entity';
+import { ApiResponse } from 'src/utils/response.utils';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -12,7 +13,7 @@ export class UsersService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async create(createUserDto: CreateUserDto) {
     const { email, password, firstName, lastName } = createUserDto;
 
     // Check if user already exists
@@ -35,16 +36,16 @@ export class UsersService {
 
     const savedUser = await newUser.save();
     const { password: _, ...result } = savedUser.toObject();
-    return result;
+    return ApiResponse.success(result, 'User created successfully');
   }
 
   findAll() {
     return `This action returns all users`;
   }
 
-  async findOne(id: string): Promise<User> {
-    const user = await this.userModel.findById(id).exec();
-    return user.toObject();
+  async findOne(query: FilterQuery<User>): Promise<User | null> {
+    const user = await this.userModel.findOne(query).select('+password').exec();
+    return user.toJSON();
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
@@ -53,18 +54,5 @@ export class UsersService {
 
   remove(id: number) {
     return `This action removes a #${id} user`;
-  }
-
-  async findByEmail(email: string): Promise<User> {
-    const user = await this.userModel
-      .findOne({ email })
-      .select('+password')
-      .exec();
-
-    if (!user) {
-      return null;
-    }
-
-    return user.toObject();
   }
 }

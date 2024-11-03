@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
   Param,
+  ParseArrayPipe,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -11,8 +14,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { SortOrder } from 'mongoose';
 import { AuthenticatedGuard } from 'src/auth/guards/authenticated.guard';
-import { GetAllPostDto } from 'src/post/dto/request-post.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostService } from './post.service';
@@ -24,19 +27,21 @@ export class PostController {
 
   @Post()
   async create(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
-    try {
-      createPostDto.author = req.user._id;
-      console.log('createPostDto', createPostDto);
-      return await this.postService.create(createPostDto);
-    } catch (error) {
-      throw error;
-    }
+    createPostDto.author = req.user._id;
+    return await this.postService.create(createPostDto);
   }
 
   @Get()
-  findAll(@Query() body: GetAllPostDto) {
-    console.log('body', body);
-    return this.postService.findAll(body);
+  findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('search') search: string,
+    @Query('sortBy', new DefaultValuePipe(['createdAt']), ParseArrayPipe)
+    sortBy: string[],
+    @Query('sortOrder', new DefaultValuePipe(['desc']), ParseArrayPipe)
+    sortOrder: SortOrder[],
+  ) {
+    return this.postService.findAll({ limit, page, search, sortBy, sortOrder });
   }
 
   @Get(':id')

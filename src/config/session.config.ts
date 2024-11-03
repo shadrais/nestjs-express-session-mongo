@@ -9,7 +9,7 @@ export class SessionConfig {
   private readonly logger = new Logger(SessionConfig.name);
   private sessionExpiry = 1000 * 60 * 30; // 30 minutes
 
-  createSessionConfig() {
+  createSessionConfig(): session.SessionOptions {
     const MongoDBSessionStore = MongoDBStore(session);
 
     const store = new MongoDBSessionStore({
@@ -33,7 +33,7 @@ export class SessionConfig {
       saveUninitialized: false,
       store: store,
       cookie: {
-        httpOnly: true,
+        httpOnly: process.env.NODE_ENV === 'production',
         secure: process.env.NODE_ENV === 'production',
         maxAge: this.sessionExpiry,
       },

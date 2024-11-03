@@ -14,6 +14,7 @@ import { AuthenticatedGuard } from 'src/auth/guards/authenticated.guard';
 import { LocalAuthGuard } from 'src/auth/guards/local-auth.guard';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
+import { ApiResponse } from 'src/utils/response.utils';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -26,25 +27,29 @@ export class AuthController {
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   async signup(@Body() createUserDto: CreateUserDto) {
-    console.log(createUserDto);
     const user = await this.usersService.create(createUserDto);
-    return {
-      message: 'User registered successfully',
+    return ApiResponse.success(
       user,
-    };
+      'User created successfully',
+      HttpStatus.CREATED,
+    );
   }
 
-  @UseGuards(LocalAuthGuard)
   @Post('login')
+  @UseGuards(LocalAuthGuard)
   @HttpCode(HttpStatus.OK)
   async login(@Request() req: TRequest) {
-    return { message: 'Logged in successfully', user: req.user };
+    return ApiResponse.success(
+      req.user,
+      'Logged in successfully',
+      HttpStatus.OK,
+    );
   }
 
   @UseGuards(AuthenticatedGuard)
   @Get('profile')
-  getProfile(@Request() req) {
-    return req.user;
+  getProfile(@Request() req: TRequest) {
+    return ApiResponse.success(req.user, 'User profile retrieved successfully');
   }
 
   @Post('logout')
@@ -52,7 +57,9 @@ export class AuthController {
   logout(@Request() req: TRequest, @Response() res: TResponse) {
     req.session.destroy(() => {
       res.clearCookie('connect.sid');
-      res.json({ message: 'Logged out successfully' });
+      res
+        .status(HttpStatus.OK)
+        .json(ApiResponse.success(null, 'Logged out successfully'));
     });
   }
 }

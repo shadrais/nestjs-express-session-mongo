@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
-  IsEnum,
+  IsArray,
   IsNotEmpty,
   IsNumber,
   IsNumberString,
@@ -28,12 +28,10 @@ export class GetAllPostDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(['asc', 'desc'], { message: 'Sort order must be asc or desc' })
-  sortOrder?: SortOrder;
+  @IsArray()
+  sortOrder?: SortOrder[];
 
   @IsOptional()
-  @IsEnum(['title', 'created_at'], {
-    message: 'Sort by must be title or created_at',
-  })
-  sortBy?: string;
+  @IsString()
+  sortBy?: string[];
 }

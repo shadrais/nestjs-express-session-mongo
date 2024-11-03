@@ -8,66 +8,77 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { MongooseError } from 'mongoose';
-
-interface ErrorResponse {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  message: string | string[];
-  error?: string;
-  stack?: string;
-}
+import { IApiErrorResponse } from 'src/common/types/api-response.types';
+import { ApiResponse } from 'src/utils/response.utils';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | string[] = 'Internal Server Error';
-    let error: string | undefined;
-    let stack: string | undefined;
+    let errorResponse: IApiErrorResponse;
 
     if (exception instanceof HttpException) {
-      status = exception.getStatus();
+      const status = exception.getStatus();
       const exceptionResponse = exception.getResponse() as any;
 
-      // Handle validation errors and other structured errors
-      if (typeof exceptionResponse === 'object') {
-        message = exceptionResponse.message || message;
-        error = exceptionResponse.error;
-        stack = exceptionResponse.stack;
-      } else {
-        message = exceptionResponse;
-      }
+      errorResponse = ApiResponse.error(
+        Array.isArray(exceptionResponse.message)
+          ? exceptionResponse.message[0]
+          : exceptionResponse.message || 'Bad Request',
+        status,
+        this.mapHttpStatusToErrorCode(status),
+        Array.isArray(exceptionResponse.message)
+          ? exceptionResponse.message.join(', ')
+          : undefined,
+      );
     } else if (exception instanceof MongooseError) {
-      message = exception.message;
-      error = 'Database Error';
-      stack = exception.stack;
-    } else if (exception instanceof Error) {
-      message = exception.message;
-      error = exception.name;
-      stack = exception.stack;
+      errorResponse = ApiResponse.error(
+        'Database operation failed',
+        HttpStatus.BAD_REQUEST,
+        'DATABASE_ERROR',
+        exception.message,
+      );
+    } else {
+      const error = exception as Error;
+      errorResponse = ApiResponse.error(
+        'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'INTERNAL_SERVER_ERROR',
+        process.env.NODE_ENV === 'development' ? error.message : undefined,
+      );
     }
 
-    const errorResponse: ErrorResponse = {
-      statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      message,
+    // Add request path
+    errorResponse.path = request.url;
+
+    // Log the error
+    this.logger.error(
+      `[${errorResponse.error.code}] ${errorResponse.message}`,
+      'stack' in exception ? exception.stack : exception,
+      GlobalExceptionFilter.name,
+    );
+
+    response.status(errorResponse.statusCode).json(errorResponse);
+  }
+
+  private mapHttpStatusToErrorCode(status: number): string {
+    const mappings: Record<number, string> = {
+      400: 'BAD_REQUEST',
+      401: 'UNAUTHORIZED',
+      403: 'FORBIDDEN',
+      404: 'NOT_FOUND',
+      409: 'CONFLICT',
+      422: 'UNPROCESSABLE_ENTITY',
+      429: 'TOO_MANY_REQUESTS',
+      500: 'INTERNAL_SERVER_ERROR',
+      503: 'SERVICE_UNAVAILABLE',
     };
 
-    if (error) {
-      errorResponse.error = error;
-    }
-
-    // Log the error for debugging (you might want to use a proper logger)
-    this.logger.error(exception, JSON.stringify(errorResponse), stack);
-
-    response.status(status).json(errorResponse);
+    return mappings[status] || 'UNKNOWN_ERROR';
   }
 }

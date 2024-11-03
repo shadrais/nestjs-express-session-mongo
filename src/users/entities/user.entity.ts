@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory, Virtual } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
+import { SchemaTypes, Types } from 'mongoose';
+import { Post } from 'src/post/entities/post.entity';
 
 @Schema({
   timestamps: true,
@@ -46,6 +47,13 @@ export class User {
     default: Date.now,
   })
   createdAt: Date;
+
+  @Prop({
+    type: [{ type: SchemaTypes.ObjectId, ref: 'Post' }],
+    default: [],
+    select: false,
+  })
+  posts?: Post[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
