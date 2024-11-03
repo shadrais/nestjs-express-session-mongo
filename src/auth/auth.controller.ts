@@ -27,6 +27,7 @@ export class AuthController {
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   async signup(@Body() createUserDto: CreateUserDto) {
+    console.log('createUserDto', createUserDto);
     const user = await this.usersService.create(createUserDto);
     return ApiResponse.success(
       user,

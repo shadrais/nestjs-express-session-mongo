@@ -4,7 +4,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ApiResponse } from 'src/utils/response.utils';
 
 @Injectable()
 export class AuthenticatedGuard implements CanActivate {
@@ -12,12 +11,7 @@ export class AuthenticatedGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
 
     if (!request.isAuthenticated()) {
-      const errorObj = ApiResponse.error(
-        'Please login to access this resource',
-        401,
-        'Unauthorized',
-      );
-      throw new UnauthorizedException(errorObj);
+      throw new UnauthorizedException('Please login to access this resource');
     }
 
     return true;

@@ -5,7 +5,7 @@ import { Model, SortOrder } from 'mongoose';
 import { IPaginatedResponse } from 'src/common/types/api-response.types';
 import { GetAllPostDto } from 'src/post/dto/request-post.dto';
 import { Post } from 'src/post/entities/post.entity';
-import { User } from 'src/users/entities/user.entity';
+import { UsersService } from 'src/users/users.service';
 import { ApiResponse } from 'src/utils/response.utils';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -14,20 +14,19 @@ import { UpdatePostDto } from './dto/update-post.dto';
 export class PostService {
   constructor(
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
-    @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createPostDto: CreatePostDto) {
     const createdPost = await this.postModel.create(createPostDto);
 
-    await this.userModel
-      .findByIdAndUpdate(createPostDto.author, {
-        $push: { posts: createdPost._id },
-      })
-      .exec();
+    await this.usersService.addPostToUser(
+      createPostDto.author._id.toHexString(),
+      createdPost._id.toHexString(),
+    );
 
     return ApiResponse.success(
-      createdPost.toJSON(),
+      (await createdPost.populate('author')).toJSON(),
       'Post created successfully',
       HttpStatus.CREATED,
     );

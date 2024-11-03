@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, SchemaTypes } from 'mongoose';
+import { SchemaTypes } from 'mongoose';
 import { User } from 'src/users/entities/user.entity';
 
 @Schema({
@@ -7,6 +7,9 @@ import { User } from 'src/users/entities/user.entity';
   versionKey: false,
 })
 export class Post {
+  @Prop({ unique: true })
+  postId: number;
+
   @Prop({ required: true })
   title: string;
 
@@ -24,5 +27,3 @@ export class Post {
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);
-
-export type PostDocument = HydratedDocument<Post>;

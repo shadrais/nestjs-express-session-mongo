@@ -45,7 +45,8 @@ export class UsersService {
 
   async findOne(query: FilterQuery<User>): Promise<User | null> {
     const user = await this.userModel.findOne(query).select('+password').exec();
-    return user.toJSON();
+
+    return user ? user.toJSON() : null;
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
@@ -54,5 +55,23 @@ export class UsersService {
 
   remove(id: number) {
     return `This action removes a #${id} user`;
+  }
+
+  async addPostToUser(userId: string, postId: string): Promise<User> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $push: { posts: postId },
+        },
+        {
+          new: true,
+          lean: true,
+          includeResultMetadata: true,
+        },
+      )
+      .exec();
+
+    return user;
   }
 }

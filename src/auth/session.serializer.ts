@@ -14,7 +14,12 @@ export class SessionSerializer extends PassportSerializer {
     user: User,
     done: (err: Error, user: Types.ObjectId) => void,
   ): any {
-    done(null, user._id);
+    try {
+      console.log('serializeUser', user);
+      done(null, user._id);
+    } catch (err) {
+      done(err, null);
+    }
   }
 
   async deserializeUser(
@@ -23,10 +28,17 @@ export class SessionSerializer extends PassportSerializer {
   ): Promise<void> {
     try {
       const user = await this.usersService.findOne({ _id: userId });
+      console.log('deserializeUser', user);
+
+      if (!user) {
+        done(null, null);
+        return;
+      }
+
       const { password, ...result } = user;
       done(null, result);
     } catch (err) {
-      done(err, null);
+      done(err as Error, null);
     }
   }
 }
